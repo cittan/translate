@@ -75,6 +75,8 @@ async function translateCurrentPage(): Promise<void> {
   showLoading('正在提取页面外文…')
 
   try {
+    // 每次翻译前清理上次的 data-ai-tr-id 标记，避免被 isSkippable 跳过
+    clearMarks(document.body)
     const items = extractForeignText(document.body)
     if (items.length === 0) {
       showResults([])
@@ -93,8 +95,6 @@ async function translateCurrentPage(): Promise<void> {
     const msg = err instanceof Error ? err.message : String(err)
     showError(`翻译失败：${msg}`)
     log('翻译失败', err)
-    // 失败时清理标记，便于用户重试
-    clearMarks(document.body)
   } finally {
     translating = false
   }
