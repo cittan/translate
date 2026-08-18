@@ -1,8 +1,8 @@
-import type { UserScript } from 'vite-plugin-monkey'
+import type { MonkeyUserScript } from 'vite-plugin-monkey'
 
 // 油猴脚本元数据
 // name/version/namespace 用于 Tampermonkey 唯一标识一个脚本
-export const meta: UserScript = {
+export const meta: MonkeyUserScript = {
   name: 'AI 整页翻译 (DeepSeek)',
   namespace: 'https://github.com/your-name/ai-page-translator',
   version: '0.2.0',
