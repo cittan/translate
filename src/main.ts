@@ -3,10 +3,11 @@
 // 流程：
 // 1. 注册油猴菜单项：设置 API Key / 切换模型 / 翻译当前页面
 // 2. 初始化右下角悬浮按钮（点击触发整页翻译）
-// 3. 翻译流程：extract -> translateBatch -> ui.showResults
-// 4. 翻译失败时清理标记，避免下次无法重新提取
+// 3. 翻译流程：extract 文本 + extract 图片 OCR -> translateBatch -> ui.showResults
+// 4. 翻译前清理 data-ai-tr-id 标记，避免上次残留导致全部被跳过
 
 import { clearMarks, extractForeignText } from './extract'
+import { extractImageText } from './image-ocr'
 import { loadConfig, saveApiKey, saveModel } from './config'
 import {
   init as initUi,
@@ -17,7 +18,7 @@ import {
   showResults,
   updateProgress,
 } from './ui'
-import { translateBatch } from './translator'
+import { translateBatch, type TranslateItem } from './translator'
 
 declare const GM_registerMenuCommand: (
   name: string,
@@ -77,17 +78,34 @@ async function translateCurrentPage(): Promise<void> {
   try {
     // 每次翻译前清理上次的 data-ai-tr-id 标记，避免被 isSkippable 跳过
     clearMarks(document.body)
-    const items = extractForeignText(document.body)
-    if (items.length === 0) {
+
+    // 1. 提取普通文本节点
+    const textItems = extractForeignText(document.body)
+    const translateItems: TranslateItem[] = textItems.map((i) => ({
+      id: i.id,
+      text: i.original,
+    }))
+
+    // 2. 提取图片中的文字（OCR）
+    if (textItems.length < 200) {
+      // 仅在文本节点不多时启用 OCR，避免超大页面耗时过久
+      showLoading('正在识别图片中的文字…')
+      const imgResult = await extractImageText(document.body)
+      translateItems.push(...imgResult.items)
+      log(
+        `OCR 完成：扫描 ${imgResult.totalImages} 张，识别 ${imgResult.recognized} 段，` +
+          `跳过 ${imgResult.skipped}，错误 ${imgResult.errors.length}`,
+      )
+    }
+
+    if (translateItems.length === 0) {
       showResults([])
       return
     }
 
-    showLoading(`正在翻译 0/${items.length}（0%）`)
-    const results = await translateBatch(
-      config,
-      items.map((i) => ({ id: i.id, text: i.original })),
-      (done, total) => updateProgress(done, total),
+    showLoading(`正在翻译 0/${translateItems.length}（0%）`)
+    const results = await translateBatch(config, translateItems, (done, total) =>
+      updateProgress(done, total),
     )
     showResults(results)
     log(`翻译完成：${results.length} 条，失败 ${results.filter((r) => r.error).length} 条`)
