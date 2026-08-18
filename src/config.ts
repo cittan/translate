@@ -8,7 +8,7 @@ export interface AppConfig {
 }
 
 const DEFAULTS: Omit<AppConfig, 'apiKey'> = {
-  model: 'deepseek-chat',
+  model: 'deepseek-v4-pro',
   targetLang: '中文',
 }
 

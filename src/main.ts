@@ -49,8 +49,11 @@ function menuSetApiKey(): void {
 }
 
 function menuSetModel(): void {
-  const current = GM_getValue<string>('ds_model', 'deepseek-chat')
-  const input = promptString('请输入模型名（如 deepseek-chat / deepseek-reasoner）：', current)
+  const current = GM_getValue<string>('ds_model', 'deepseek-v4-pro')
+  const input = promptString(
+    '请输入模型名（推荐 deepseek-v4-pro / deepseek-v4-flash；旧版可用 deepseek-chat / deepseek-reasoner）：',
+    current,
+  )
   if (input == null) return
   saveModel(input)
   alert('模型已保存：' + input.trim())

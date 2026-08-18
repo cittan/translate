@@ -64,7 +64,25 @@ function gmFetch(opts: GmFetchOptions): Promise<GMResponse> {
 }
 
 // 调用 DeepSeek chat 接口完成一次补全
+// 适配新模型：deepseek-v4-pro / deepseek-v4-flash（支持 thinking 与 reasoning_effort）
+// 兼容旧模型：deepseek-chat / deepseek-reasoner（不带这两个字段）
 async function chat(config: AppConfig, system: string, user: string): Promise<string> {
+  const body: Record<string, unknown> = {
+    model: config.model,
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: user },
+    ],
+    temperature: 0.3,
+    stream: false,
+  }
+
+  // v4 系列支持 thinking + reasoning_effort；旧模型忽略这两个字段
+  if (/^deepseek-v4/.test(config.model)) {
+    body.thinking = { type: 'enabled' }
+    body.reasoning_effort = 'high'
+  }
+
   const res = await gmFetch({
     method: 'POST',
     url: API_URL,
@@ -72,15 +90,7 @@ async function chat(config: AppConfig, system: string, user: string): Promise<st
       'Content-Type': 'application/json',
       Authorization: `Bearer ${config.apiKey}`,
     },
-    data: JSON.stringify({
-      model: config.model,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
-      temperature: 0.3,
-      stream: false,
-    }),
+    data: JSON.stringify(body),
   })
 
   if (res.status === 401) throw new Error('API Key 无效或已过期')
@@ -90,7 +100,10 @@ async function chat(config: AppConfig, system: string, user: string): Promise<st
     throw new Error(`DeepSeek 请求失败：${res.status} ${res.statusText}`)
   }
 
-  let payload: { choices?: { message?: { content?: string } }[] }
+  // v4 thinking 模型可能返回 reasoning_content + content，仅取最终 content
+  let payload: {
+    choices?: { message?: { content?: string; reasoning_content?: string } }[]
+  }
   try {
     payload = JSON.parse(res.responseText)
   } catch {
