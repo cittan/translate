@@ -182,20 +182,29 @@ export function openPanel(opts: PanelOptions = {}): PanelHandles {
   const root = ensureRoot()
   closePanel()
 
-  const el = document.createElement('div')
-  el.innerHTML = `
-    <div class="ai-tr-header">
-      <span class="ai-tr-title">${escapeHtml(opts.title ?? 'AI 翻译')}</span>
-      <button class="ai-tr-close" type="button" aria-label="关闭">×</button>
-    </div>
-    <div class="ai-tr-body"></div>
-  `
-  panel = el.firstElementChild as HTMLElement
+  panel = document.createElement('div')
+  const header = document.createElement('div')
+  header.className = 'ai-tr-header'
+  const title = document.createElement('span')
+  title.className = 'ai-tr-title'
+  title.textContent = opts.title ?? 'AI 翻译'
+  const closeBtn = document.createElement('button')
+  closeBtn.className = 'ai-tr-close'
+  closeBtn.type = 'button'
+  closeBtn.setAttribute('aria-label', '关闭')
+  closeBtn.textContent = '×'
+  closeBtn.addEventListener('click', closePanel)
+  header.appendChild(title)
+  header.appendChild(closeBtn)
+
+  const body = document.createElement('div')
+  body.className = 'ai-tr-body'
+
+  panel.appendChild(header)
+  panel.appendChild(body)
   root.appendChild(panel)
 
-  const body = panel.querySelector('.ai-tr-body') as HTMLElement
-  panel.querySelector('.ai-tr-close')?.addEventListener('click', closePanel)
-  enableDrag(panel, panel.querySelector('.ai-tr-header') as HTMLElement)
+  enableDrag(panel, header)
 
   handles = { root: panel, body }
   return handles
