@@ -64,8 +64,7 @@ function gmFetch(opts: GmFetchOptions): Promise<GMResponse> {
 }
 
 // 调用 DeepSeek chat 接口完成一次补全
-// 适配新模型：deepseek-v4-pro / deepseek-v4-flash（支持 thinking 与 reasoning_effort）
-// 兼容旧模型：deepseek-chat / deepseek-reasoner（不带这两个字段）
+// 当前可用模型：deepseek-v4-pro / deepseek-v4-flash，均支持 thinking 与 reasoning_effort
 async function chat(config: AppConfig, system: string, user: string): Promise<string> {
   const body: Record<string, unknown> = {
     model: config.model,
@@ -75,12 +74,8 @@ async function chat(config: AppConfig, system: string, user: string): Promise<st
     ],
     temperature: 0.3,
     stream: false,
-  }
-
-  // v4 系列支持 thinking + reasoning_effort；旧模型忽略这两个字段
-  if (/^deepseek-v4/.test(config.model)) {
-    body.thinking = { type: 'enabled' }
-    body.reasoning_effort = 'high'
+    thinking: { type: 'enabled' },
+    reasoning_effort: 'high',
   }
 
   const res = await gmFetch({
@@ -100,7 +95,7 @@ async function chat(config: AppConfig, system: string, user: string): Promise<st
     throw new Error(`DeepSeek 请求失败：${res.status} ${res.statusText}`)
   }
 
-  // v4 thinking 模型可能返回 reasoning_content + content，仅取最终 content
+  // thinking 模型可能返回 reasoning_content + content，仅取最终 content
   let payload: {
     choices?: { message?: { content?: string; reasoning_content?: string } }[]
   }
