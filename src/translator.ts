@@ -36,7 +36,7 @@ interface GMResponse {
   statusText: string
   responseText: string
 }
-declare const GM_xmlhttpRequest: (details: {
+type GMRequestDetails = {
   method: 'GET' | 'POST'
   url: string
   headers?: Record<string, string>
@@ -45,9 +45,13 @@ declare const GM_xmlhttpRequest: (details: {
   onload: (res: GMResponse) => void
   onerror: (err: unknown) => void
   ontimeout?: () => void
-}) => void
+}
+declare const GM_xmlhttpRequest: (details: GMRequestDetails) => void
 
-function gmFetch(opts: Parameters<typeof GM_xmlhttpRequest>[0]): Promise<GMResponse> {
+// gmFetch 入参：不包含回调字段（由 Promise 内部注入）
+type GmFetchOptions = Omit<GMRequestDetails, 'onload' | 'onerror' | 'ontimeout'>
+
+function gmFetch(opts: GmFetchOptions): Promise<GMResponse> {
   return new Promise((resolve, reject) => {
     GM_xmlhttpRequest({
       ...opts,
